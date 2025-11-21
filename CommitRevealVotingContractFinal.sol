@@ -1,11 +1,26 @@
 // ************* HERE STARTS THE VOTING TOKEN CONTRACT *******************
 
+/*  
+    ---The purpose of this Smart Contract---
+    The VoteToken contract is an ERC-20–compatible token that serves as the voting currency 
+    in our commit–reveal voting system. It implements the standard 
+    ERC-20 interface (balances, allowances, transfers, and events) and uses the OpenZeppelin Ownable module 
+    to ensure that only the administrator can mint new tokens or configure the voting contract. 
+    In our architecture, VoteToken is purchased by users through the pricing contract and later locked as voting weight during the commit phase.
+    
+*/
+
+
+
 // SPDX-License-Identifier: MIT
 /*  (1): As stated in the lecture slides smart contracts must include a license identifier,
          in our case MIT is the default commonly used open-source license
          comment required by Solidity to make public to the world.
          Source: Solidity Basics PDF, lecture slides
  */
+
+
+
 
 pragma solidity ^0.8.9;
 /*  (2): The instruction that tells solidity the compiler version to be used,
@@ -22,25 +37,84 @@ import "https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/v4
          Library name: OpenZeppelin Contracts
          We imported Ownable to give the VoteToken contract a single admin address (the owner). 
          We wanted to reuse a standard, audited access-control module instead of writing our own owner logic from scratch, to follow best practices.
-         Sample with imported contracts where we got insipired from: https://github.com/Uniswap/v3-periphery/blob/main/contracts/V3Migrator.sol
+         Sample with imported contracts where we got inspired from: https://github.com/Uniswap/v3-periphery/blob/main/contracts/V3Migrator.sol
  */
+
+
+
+
 contract VoteToken is Ownable {
+/*  (4): Creates a smart contract called VoteToken.
+         This contract inherits all the features of the Ownable contract I imported earlier.
+         un restricted functions like mint or setVotingContract.
+         Sample with imported contracts where we got inspired from: https://github.com/Uniswap/v3-periphery/blob/main/contracts/V3Migrator.sol
+         Source: Account Model PDF, lecture slides
+ */
+
+
     // 1. Token metadata
     string public name;
     string public symbol;
     uint8 public decimals;
+
+/*  (5): This is just a comment grouping the variables that define identity information of the token.
+         It tells wallets what the token should be called, what its symbol is, and how many decimals it uses.
+         These fields (name, symbol, decimals) are part of the standard token metadata model used in ERC-20 and ERC-721.
+         Library name: OpenZeppelin Contracts
+         Source: Real ERC-20 metadata fields in OpenZeppelin
+         Sample: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol
+         Source: Tokenization Introduction PDF, lecture slides
+         string public name; --> This is the full name of our token. Because it’s public, Solidity automatically creates a function name().
+         string public symbol; --> This is our token’s ticker symbol.
+         uint8 public decimals; --> This tells the wallet how many decimal places the token has.
+         These three metadata variables (name, symbol, decimals) are required by 
+         standard ERC-20 implementations and follow the same structure used in 
+         OpenZeppelin’s ERC-20 contract, allowing wallets to recognize and display the token correctly.
+*/
 
     // 2. ERC-20 state
     uint256 public totalSupply;
     mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowed;
 
-    // 3. Voting contract that is allowed to mint/burn (unchanged)
+
+/*(6):  This is just a comment that will show the state of our ERC-20 Token.
+         We create a uint256, that will later be created as a function, in which we will use to find out the total supply of tokens.
+         mapping(address => uint256) private balances; --> stores how many tokens each address owns. We need it so that we know who owns which Tokens.
+         mapping(address => mapping(address => uint256)) private allowed; --> This is a nested mapping that stores 
+         how many tokens one address allows another address to spend. These allows other contracts to move Tokens with Permission.
+         Source: Tokenization Introduction PDF, lecture slides
+*/
+
+
+
+    // 3. Voting contract that is allowed to mint/burn 
     address public votingContract;
+
+/*  (7):  votingContract is the only one allowed to create (mint) or destroy (burn) these VoteTokens.
+          These variobale stores one address on the Blockchain, will be created as a function.
+          Source: address public votingContract; stores the address of the Commit-Reveal voting contract. 
+          It is a custom variable added by our group to link the VoteToken to the voting mechanism. 
+          It is not part of the ERC-20 standard and does not appear in the lecture slides. 
+          We use it so that only the designated voting contract can mint or burn tokens via the onlyVotingContract modifier.
+          Sample: A similar pattern is used in existing BEP-20 tokens on BNB Smart Chain, which also expose an address public votingContract;
+          Source: https://vscode.blockscan.com/56/0x8a682cc16df6574801ae578c3858f0dac44398c7?utm_source=chatgpt.com
+*/
+
+
+
 
     // 4. ERC-20 events
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
+
+/*  (8):  Here we define the events that every ERC-20 token should have. 
+          An event is like a log message that the blockchain writes when something happens.
+          This event is used every time tokens move from one address to another.
+          This event is emitted when someone gives permission to another address to spend their tokens.
+          Source: Tokenization Introduction PDF, lecture slides
+*/
+
 
     // 5. Constructor: create initial supply and basic token data
     constructor(
@@ -57,6 +131,23 @@ contract VoteToken is Ownable {
 
         emit Transfer(address(0), msg.sender, _initialAmount);
     }
+
+/* (9):
+      This comment tells us that the next part will set up the token the moment the contract is deployed.
+      The constructor is a special function that runs only once in the entire lifetime of the contract.
+      _initialAmount tells the contract how many tokens should exist at the beginning.
+      _tokenName allows us to select a readable name for the token.
+      _decimalUnits defines how many decimal places the token uses .
+      _tokenSymbol is the short version of the token name, like “CLC” or “VOTO”.
+      Inside the constructor, we give all the newly created tokens to msg.sender (the deployer of the contract).
+      totalSupply is set equal to the amount of tokens we just created.
+      The token name, decimals, and symbol are saved so wallets can display them correctly.
+      We emit a Transfer event from address(0) to show that the tokens were minted out of nowhere.
+      This is the standard ERC-20 way to signal initial token creation.
+      Source: Tokenization Introduction PDF, lecture slides
+*/
+
+
 
     // 6. Standard ERC-20 functions (unchanged)
     function balanceOf(address _owner) public view returns (uint256 balance) {
@@ -105,6 +196,49 @@ contract VoteToken is Ownable {
         return allowed[_owner][_spender];
     }
 
+
+/* (10):
+
+      This part of the code contains all the standard ERC-20 functions that every token must have.
+      These functions follow the official ERC-20 interface exactly, so other smart contracts and wallets
+      can interact with our token without problems.
+
+      balanceOf():
+          This function lets anyone check how many tokens a specific address owns.
+          It does not change anything on the blockchain; it only reads the balance from the mapping.
+
+      transfer():
+          This sends tokens from my own account (msg.sender) to another address.
+          We check first that I have enough tokens.
+          Then we subtract the amount from my balance and add it to the receiver’s balance.
+          We emit a Transfer event so wallets like MetaMask can show the transaction.
+
+      transferFrom():
+          This allows a smart contract or another address to send tokens on behalf of someone else.
+          First we check that the caller (msg.sender) has enough allowance.
+          Then we check that the _from address actually has the tokens.
+          If the allowance is not unlimited, we reduce it.
+          Then we move the tokens and emit a Transfer event.
+          This is what DEXs (like Uniswap) use when you swap tokens.
+
+      approve():
+          This function gives another address permission to spend my tokens.
+          We store how much they can spend in the allowed mapping.
+          We emit an Approval event so contracts know the new allowance.
+
+      allowance():
+          This shows how many tokens a spender is allowed to spend from an owner’s account.
+          It only reads from the allowed mapping and does not change anything.
+
+      These functions together make the token fully ERC-20 compliant, meaning it behaves exactly like
+      every other ERC-20 token on Ethereum.
+
+      Source: Tokenization Introduction PDF, lecture slides
+              
+*/
+
+
+
     // 7. Custom logic for voting system
 
     modifier onlyVotingContract() {
@@ -118,7 +252,7 @@ contract VoteToken is Ownable {
         votingContract = _votingContract;
     }
 
-    // Mint votes to a user when called by the voting contract
+    // Mint votes to a user when called by the voting contract (unchanged)
     function mintForVoting(address _to, uint256 _amount) external onlyVotingContract {
         totalSupply += _amount;
         balances[_to] += _amount;
@@ -136,8 +270,12 @@ contract VoteToken is Ownable {
         emit Transfer(_from, address(0), _amount);
     }
 
-    
-    // owner-only mint function
+
+    /**
+     * owner-only mint function
+     *  - added so token owner can mint tokens to the VotePricing contract for pre-funding
+     *  - this is the only new externally-visible owner function (safe and minimal)
+     */
     function mint(address to, uint256 amount) external onlyOwner {
         require(to != address(0), "mint to zero");
         totalSupply += amount;
@@ -146,6 +284,78 @@ contract VoteToken is Ownable {
     }
 }
 
+/* (11):
+      This whole block is the “custom logic” that connects our ERC-20 token to the voting system.
+      The general ideas of modifiers and events come from the lectures, but the concrete functions
+      (onlyVotingContract, setVotingContract, mintForVoting, burnForVoting, mint) are custom-made
+      for our project and are NOT directly in the slides.
+
+      modifier onlyVotingContract() {
+          require(msg.sender == votingContract, "Not voting contract");
+          _;
+      }
+          This is a custom modifier that we created.
+          It makes sure that only the votingContract address is allowed to call certain functions.
+          require(...) checks that msg.sender is exactly the stored votingContract.
+          The "_;" means: if the require passes, continue with the rest of the function.
+          Source: Functions and Modifiers PDF 
+
+      function setVotingContract(address _votingContract) external {
+          require(votingContract == address(0), "Voting contract already set");
+          votingContract = _votingContract;
+      }
+          This function sets the address of the voting contract exactly once.
+          We check that votingContract is still address(0), so we cannot overwrite it later.
+          This prevents someone from swapping the voting contract to a malicious one.
+          Marked external so only outside callers can use it, but not internal logic.
+          Source: This exact function is NOT in the slides; it is custom for our voting system.
+
+      function mintForVoting(address _to, uint256 _amount) external onlyVotingContract {
+          totalSupply += _amount;
+          balances[_to] += _amount;
+          emit Transfer(address(0), _to, _amount);
+      }
+          This function is called by the voting contract when it wants to give a user voting tokens.
+          Because of onlyVotingContract, nobody else can mint these tokens.
+          We increase totalSupply, because we are creating new tokens.
+          We increase the balance of _to by the minted amount.
+          We emit a Transfer event from address(0) to show that these tokens were minted.
+          The minting pattern (using address(0)) follows the example from the constructor in the Tokenization slides,
+          but the voting-specific purpose (mintForVoting) is custom.
+          
+
+      function burnForVoting(address _from, uint256 _amount) external onlyVotingContract {
+          require(balances[_from] >= _amount, "Not enough balance to burn");
+          balances[_from] -= _amount;
+          totalSupply -= _amount;
+          emit Transfer(_from, address(0), _amount);
+      }
+          This function is called by the voting contract when a user spends their votes.
+          We first check that _from actually has enough voting tokens to burn.
+          We reduce the user’s balance and also reduce totalSupply, because tokens are destroyed.
+          We emit a Transfer event to address(0) to signal that tokens were burned.
+          Source: Again, the burn pattern (Transfer to address(0)) is consistent with common ERC-20 practice,
+          but the exact burnForVoting function is custom and not in the lecture slides.
+
+      function mint(address to, uint256 amount) external onlyOwner {
+          require(to != address(0), "mint to zero");
+          totalSupply += amount;
+          balances[to] += amount;
+          emit Transfer(address(0), to, amount);
+      }
+          This is an extra mint function that only the contract owner is allowed to call.
+          onlyOwner comes from the imported OpenZeppelin Ownable contract, not from the slides.
+          We use it so the token owner can pre-fund other contracts (like a VotePricing contract) with tokens.
+          We do not allow minting to the zero address to avoid mistakes.
+          Just like mintForVoting, we increase totalSupply and the recipient’s balance, and emit a Transfer from address(0).
+          This function is not in the lecture slides; it is custom for our project.
+          Source: OpenZeppelin Ownable.sol (imported in our code).
+
+      Summary:
+          – Modifiers, events, and the idea of using address(0) for mint/burn come from the lecture material.
+          – The specific functions onlyVotingContract, setVotingContract, mintForVoting, burnForVoting, and mint
+            are custom-designed for our voting token use case and are not directly present in the slides.
+*/
 
 // ************* HERE STARTS THE TIERED PRICING CONTRACT *******************
 // SPDX-License-Identifier: MIT
